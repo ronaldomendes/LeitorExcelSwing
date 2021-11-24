@@ -6,8 +6,19 @@
 package excelswing.importaarquivo;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
  *
@@ -74,6 +85,13 @@ public class ImportaArquivo extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnImpArquivoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnImpArquivoActionPerformed
+
+        ArrayList<String> cabecalho = new ArrayList<>();
+        ArrayList<String> titulo = new ArrayList<>();
+        ArrayList<String> valor = new ArrayList<>();
+        ArrayList<String> venda = new ArrayList<>();
+        ArrayList<String> adquirido = new ArrayList<>();
+
 //        permite a criação de um filtro personalizado para selecionar arquivos específicos
         FileNameExtensionFilter filter = new FileNameExtensionFilter("Arquivos Excel (*.xls, *.xlsx, *.xlsb)", "xls", "xlsx", "xlsb");
 //        cria a caixa de diálogo
@@ -88,11 +106,56 @@ public class ImportaArquivo extends javax.swing.JFrame {
         fileChooser.setFileFilter(filter);
 //        ativa a visualização da caixa de diálogo
         int retorno = fileChooser.showOpenDialog(this);
-        
+
 //        se confirmar a seleção do arquivo, adiciona o caminho, senão deixa em branco
         if (retorno == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
             txtNomeArquivo.setText(file.getPath());
+
+            try (FileInputStream input = new FileInputStream(file)) {
+                XSSFWorkbook importedFile = new XSSFWorkbook(input);
+                XSSFSheet sheet = importedFile.getSheetAt(0);
+
+                Iterator<Row> rowIterator = sheet.iterator();
+                while (rowIterator.hasNext()) {
+                    Row row = rowIterator.next();
+                    Iterator<Cell> cellIterator = row.cellIterator();
+                    while (cellIterator.hasNext()) {
+                        Cell cell = cellIterator.next();
+                        if (row.getRowNum() == 0) {
+                            cabecalho.add(cell.getStringCellValue());
+                        } else {
+                            switch (cell.getColumnIndex()) {
+                                case 0:
+                                    titulo.add(cell.getStringCellValue());
+                                    break;
+                                case 1:
+                                    valor.add(String.valueOf(cell.getNumericCellValue()));
+                                    break;
+                                case 2:
+                                    venda.add(String.valueOf(cell.getNumericCellValue()));
+                                    break;
+                                case 3:
+                                    adquirido.add(String.valueOf(cell.getNumericCellValue()));
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                }
+                input.close();
+                System.out.println("Cabeçalho: " + cabecalho + System.lineSeparator());
+                System.out.println("Titulo: " + titulo + System.lineSeparator());
+                System.out.println("Valor: " + valor + System.lineSeparator());
+                System.out.println("Venda: " + venda + System.lineSeparator());
+                System.out.println("Adquirido: " + adquirido + System.lineSeparator());
+
+            } catch (FileNotFoundException ex) {
+                Logger.getLogger(ImportaArquivo.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(ImportaArquivo.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
             txtNomeArquivo.setText(null);
         }
@@ -114,13 +177,7 @@ public class ImportaArquivo extends javax.swing.JFrame {
                     break;
                 }
             }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ImportaArquivo.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ImportaArquivo.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ImportaArquivo.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(ImportaArquivo.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
