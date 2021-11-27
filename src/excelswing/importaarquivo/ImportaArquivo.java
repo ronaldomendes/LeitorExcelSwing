@@ -10,13 +10,15 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -86,14 +88,13 @@ public class ImportaArquivo extends javax.swing.JFrame {
 
     private void btnImpArquivoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnImpArquivoActionPerformed
 
-        ArrayList<String> cabecalho = new ArrayList<>();
-        ArrayList<String> titulo = new ArrayList<>();
-        ArrayList<String> valor = new ArrayList<>();
-        ArrayList<String> venda = new ArrayList<>();
-        ArrayList<String> adquirido = new ArrayList<>();
+        List<String> results = Arrays.asList("RESPONSÁVEL", "NR.AUTORIZACAO");
+        ArrayList<String> headers = new ArrayList<>();
+        Set<Long> authOne = new HashSet<>();
+        Set<Long> authTwo = new HashSet<>();
 
 //        permite a criação de um filtro personalizado para selecionar arquivos específicos
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("Arquivos Excel (*.xls, *.xlsx, *.xlsb)", "xls", "xlsx", "xlsb");
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Arquivos Excel (*.xls, *.xlsx)", "xls", "xlsx");
 //        cria a caixa de diálogo
         JFileChooser fileChooser = new JFileChooser();
 //        cria o título da caixa de diálogo
@@ -114,47 +115,44 @@ public class ImportaArquivo extends javax.swing.JFrame {
 
             try (FileInputStream input = new FileInputStream(file)) {
                 XSSFWorkbook importedFile = new XSSFWorkbook(input);
-                XSSFSheet sheet = importedFile.getSheetAt(0);
+                XSSFSheet sheetOne = importedFile.getSheetAt(0);
+                XSSFSheet sheetTwo = importedFile.getSheetAt(1);
 
-                Iterator<Row> rowIterator = sheet.iterator();
-                while (rowIterator.hasNext()) {
-                    Row row = rowIterator.next();
-                    Iterator<Cell> cellIterator = row.cellIterator();
-                    while (cellIterator.hasNext()) {
-                        Cell cell = cellIterator.next();
-                        if (row.getRowNum() == 0) {
-                            cabecalho.add(cell.getStringCellValue());
-                        } else {
-                            switch (cell.getColumnIndex()) {
-                                case 0:
-                                    titulo.add(cell.getStringCellValue());
-                                    break;
-                                case 1:
-                                    valor.add(String.valueOf(cell.getNumericCellValue()));
-                                    break;
-                                case 2:
-                                    venda.add(String.valueOf(cell.getNumericCellValue()));
-                                    break;
-                                case 3:
-                                    adquirido.add(String.valueOf(cell.getNumericCellValue()));
-                                    break;
-                                default:
-                                    break;
-                            }
+//        salva todos os cabeçalhos em uma lista
+                for (int i = 0; i < sheetOne.getRow(0).getLastCellNum(); i++) {
+                    headers.add(sheetOne.getRow(0).getCell(i).getStringCellValue());
+                }
+
+//        verifica se os valores dos cabeçalhos estão corretos antes de processar as validações
+                boolean anyMatch = headers.stream().anyMatch(s -> results.contains(s));
+                if (anyMatch) {
+                    for (int i = 1; i <= sheetOne.getLastRowNum(); i++) {
+                        String field = sheetOne.getRow(i).getCell(0).getStringCellValue();
+                        if (field.equals("MULTICANAL") || field.contains("R102")) {
+                            authOne.add((long) sheetOne.getRow(i).getCell(6).getNumericCellValue());
                         }
                     }
-                }
-                input.close();
-                System.out.println("Cabeçalho: " + cabecalho + System.lineSeparator());
-                System.out.println("Titulo: " + titulo + System.lineSeparator());
-                System.out.println("Valor: " + valor + System.lineSeparator());
-                System.out.println("Venda: " + venda + System.lineSeparator());
-                System.out.println("Adquirido: " + adquirido + System.lineSeparator());
 
+                    for (int i = 1; i <= sheetTwo.getLastRowNum(); i++) {
+                        String field = sheetTwo.getRow(i).getCell(0).getStringCellValue();
+                        if (field.equals("MULTICANAL") || field.contains("R102")) {
+                            authTwo.add((long) sheetTwo.getRow(i).getCell(6).getNumericCellValue());
+                        }
+                    }
+
+                input.close();
+                JOptionPane.showMessageDialog(null, "Autorizações Planilha 1: " + authOne.size() + 
+                        "\nAutorizações Planilha 2: " + authTwo.size(), "Processo finalizado", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(null, "Abra apenas o tipo correto de planilha!"
+                            + "\nEstá aplicação é muito séria!",
+                            "Tenha cuidado!", JOptionPane.WARNING_MESSAGE);
+                }
             } catch (FileNotFoundException ex) {
-                Logger.getLogger(ImportaArquivo.class.getName()).log(Level.SEVERE, null, ex);
+                JOptionPane.showMessageDialog(null, ex.getMessage(), "Erro!", JOptionPane.ERROR_MESSAGE);
             } catch (IOException ex) {
-                Logger.getLogger(ImportaArquivo.class.getName()).log(Level.SEVERE, null, ex);
+                JOptionPane.showMessageDialog(null, ex.getMessage(), "Erro!", JOptionPane.ERROR_MESSAGE);
             }
         } else {
             txtNomeArquivo.setText(null);
